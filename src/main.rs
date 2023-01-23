@@ -55,7 +55,8 @@ async fn main() {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let rest = Router::new().route("/", get(web_root))
+    let rest = Router::new()
+        .route("/", get(web_root))
         .layer(
             TraceLayer::new_for_http()
                 .on_body_chunk(|chunk: &Bytes, latency: Duration, _: &tracing::Span| {
@@ -66,12 +67,13 @@ async fn main() {
         );
 
     let grpc = ServiceBuilder::new()
-        .layer(TraceLayer::new_for_grpc()
-                   .on_body_chunk(|chunk: &Bytes, latency: Duration, _: &tracing::Span| {
-            tracing::trace!(size_bytes = chunk.len(), latency = ?latency, "gRPC sending body chunk")
-        })
-                   .make_span_with(DefaultMakeSpan::new().include_headers(true))
-                   .on_response(DefaultOnResponse::new().include_headers(true).latency_unit(LatencyUnit::Micros))
+        .layer(
+            TraceLayer::new_for_grpc()
+            .on_body_chunk(|chunk: &Bytes, latency: Duration, _: &tracing::Span| {
+                tracing::trace!(size_bytes = chunk.len(), latency = ?latency, "gRPC sending body chunk")
+            })
+            .make_span_with(DefaultMakeSpan::new().include_headers(true))
+            .on_response(DefaultOnResponse::new().include_headers(true).latency_unit(LatencyUnit::Micros))
         )
         .service(GreeterServer::new(GrpcServiceImpl::default()));
 
